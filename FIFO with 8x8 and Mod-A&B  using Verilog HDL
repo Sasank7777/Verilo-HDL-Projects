@@ -1,125 +1,191 @@
 // Design Code for FIFO
-module fifo_8x8(input clk, rst, wr_en, rd_en,input [7:0] data_in,output reg [7:0] data_out,output full, empty
+module fifo_8x8(
+    input clk,
+    input rst,
+    input wr_en,
+    input rd_en,
+    input [7:0] data_in,
+    output reg [7:0] data_out,
+    output full,
+    output empty
 );
 
-  reg [2:0] wr_ptr = 0;
-  reg [2:0] rd_ptr = 0;
-  reg [7:0] mem[0:7];
-  integer i;
+reg [2:0] wr_ptr;
+reg [2:0] rd_ptr;
+reg [7:0] mem [0:7];
 
-  always@ (posedge clk)
-    begin
-      if(rst)
-        begin
-          for(i=0; i<7; i= i+1)
-            mem[i] <=0;
+integer i;
+
+always @(posedge clk) begin
+    if (rst) begin
+        wr_ptr <= 3'd0;
+        rd_ptr <= 3'd0;
+        data_out <= 8'd0;
+        for (i=0; i<8; i=i+1)
+            mem[i] <= 8'd0;
+    end
+    else begin
+        if (wr_en && !full) begin
+            mem[wr_ptr] <= data_in;
+            wr_ptr <= wr_ptr + 1'b1;
         end
-      if( wr_en && full ==0) 
-        begin
-          mem [wr_ptr] <= data_in;
-          wr_ptr <= wr_ptr + 1'b1;
-        end
-      if(rd_en && empty == 0)
-        begin
-          data_out <= mem[rd_ptr] ;
-          rd_ptr <= rd_ptr + 1'b1;
+
+        if (rd_en && !empty) begin
+            data_out <= mem[rd_ptr];
+            rd_ptr <= rd_ptr + 1'b1;
         end
     end
-assign full = ((wr_ptr + 1'b1) == rd_ptr) ? 1'b1 : 1'b0;
-assign empty = wr_ptr == rd_ptr;I
-endmodule 
+end
+assign empty = (wr_ptr == rd_ptr);
+assign full  = ((wr_ptr + 1'b1) == rd_ptr);
 
-
-// Code for MOD A
-module mod_a(input [7:0]data_in, input clk, rst. output reg data_out);
-  always(@posedge clk)
-    begin
-      if(rst)begin
-        data_out <= 0;
-        wr_enb = 0;
-      end
-      else
-        data_out <= data_in;
-      wr_enb = 1;
-    end
 endmodule
 
 
+// Code for MOD A
+module mod_a(
+    input clk,
+    input rst,
+    input [7:0] data_in,
+    output reg [7:0] data_out,
+    output reg wr_enb
+);
+
+always @(posedge clk) begin
+    if (rst) begin
+        data_out <= 8'd0;
+        wr_enb <= 1'b0;
+    end
+    else begin
+        data_out <= data_in;
+        wr_enb <= 1'b1;
+    end
+end
+endmodule
+
+
+
 // Code for MOD B
-module mod_b(input data_in, clk, rst, output reg [7:0]data_out, output reg rd_enb);
-  parameter idle = 2;b00;
-  parameter s1 = 2'b01;
-  parameter data_state = 2'b10; 
-  always@(posedge clk)
-    begin
-      if(rst)
-        ps <= idle;
-      else
+module mod_b(
+    input clk,
+    input rst,
+    input [7:0] data_in,
+    output reg [7:0] data_out,
+    output reg rd_enb
+);
+parameter IDLE = 2'b00;
+parameter S1 = 2'b01;
+parameter DATA_STATE = 2'b10;
+reg [1:0] ps, ns;
+
+always @(posedge clk) begin
+    if (rst)
+        ps <= IDLE;
+    else
         ps <= ns;
-    end
-  always@(*)
-    begin
-      case(ps)
-        idle : begin
-          ns = s1;
-          rd_enb = 0;
+end
+
+always @(*) begin
+    ns = ps;
+    rd_enb = 0;
+    data_out = 8'd0;
+    case(ps)
+        IDLE: begin
+            ns = S1;
         end
-        s1 : begin
-          ns = data_state;
+        S1: begin
+            ns = DATA_STATE;
         end
-        data_state : begin
-          ns = idle;
-          rd_enb = 1;
-          data_out = data_in;
+        DATA_STATE: begin
+            rd_enb = 1'b1;
+            data_out = data_in;
+            ns = IDLE;
         end
-      endcase
-    end
+        default: begin
+            ns = IDLE;
+        end
+    endcase
+end
 endmodule
 
 
 
 // Code for Top module
-module Top(input clk, rst, [7:0]data_in_top, data_out_top);
-  wire [7:0] data_out_temp;
-  wire wr_enb,rd_enb;
-  wire [7:0] full, empty
-  wire [7:0] data_out_fifo;
-  mod_a mod1(data_top, clk, rst, data_out_enb, wr_enb);
-  fifo_8x8 fi1(clk, rst, wr_enb, rd_enb, data_out_temp,data_out_fifo, full, empty);
-  mod_b mod2( clk, rst, data_out_fifo,data_out_top, rd_enb);
+module Top(
+    input clk,
+    input rst,
+    input [7:0] data_in_top,
+    output [7:0] data_out_top
+);
+
+wire [7:0] data_out_temp;
+wire [7:0] data_out_fifo;
+wire wr_enb;
+wire rd_enb;
+wire full;
+wire empty;
+
+mod_a mod1(
+    .clk(clk),
+    .rst(rst),
+    .data_in(data_in_top),
+    .data_out(data_out_temp),
+    .wr_enb(wr_enb)
+);
+
+fifo_8x8 fifo1(
+    .clk(clk),
+    .rst(rst),
+    .wr_en(wr_enb),
+    .rd_en(rd_enb),
+    .data_in(data_out_temp),
+    .data_out(data_out_fifo),
+    .full(full),
+    .empty(empty)
+);
+
+mod_b mod2(
+    .clk(clk),
+    .rst(rst),
+    .data_in(data_out_fifo),
+    .data_out(data_out_top),
+    .rd_enb(rd_enb)
+);
 endmodule
 
 
+
 // testbench code 
-module fifo_8_8_tb(
-
-);
-
-reg clk, rst;
+module fifo8x8_tb;
+reg clk;
+reg rst;
 reg [7:0] data_in;
-
 wire [7:0] data_out;
-
-  fifp3_8 dut (clk, rst, data_in, data_out, full, empty) ;
-
-initial
-begin
-  {clk, rst,  data_in} = 0;
-end
-
+Top dut(
+    .clk(clk),
+    .rst(rst),
+    .data_in_top(data_in),
+    .data_out_top(data_out)
+);
 always #5 clk = ~clk;
-  initial
-begin
-rst = 1;
-#10;
-rst = 0;
-data_in = 5;
-#10;
-data_in = 10;
-#10;
-data_in = 50;
-#10;
-$finish;
+initial begin
+    clk = 0;
+    rst = 1;
+    data_in = 0;
+    #10;
+    rst = 0;
 
+    #10;
+    data_in = 8'd5;
+    #10;
+    data_in = 8'd10;
+    #10;
+    data_in = 8'd50;
+    #40;
+    $finish;
+end
+initial begin
+    $monitor("Time=%0t rst=%b data_in=%d data_out=%d",
+             $time, rst, data_in, data_out);
 end
 endmodule
