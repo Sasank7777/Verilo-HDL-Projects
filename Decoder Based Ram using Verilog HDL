@@ -1,0 +1,79 @@
+// Design Code
+module ram8x8(input clk,rst,we,cs,oe, input[2:0]add, inout[7:0]data);
+  reg[7:0] mem[0:7];
+  reg[7:0] temp_data;
+  always@(posedge clk)
+    begin
+      if(rst)
+        for(i=0; i<7; i=i+1)
+          mem[i] <= 0;
+      else if(we&&cs)
+        mem[addr] <= data;
+      else if(cs && !we)
+        temp_data <= mem[addr];
+    end
+  assign data = (!we && cs && oe)? temp_data : 'bz;
+endmodule
+
+
+// TestBench Code
+module ram8x8_tb();
+  reg clk, rst, we, cs, oe;
+  reg [2:0]addr;
+  reg [7:0]data_temp;
+  wire [7:0]data;
+  ram8x8 dut1 (clk, rst, we, cs, oe, addr, data) ;
+  ram8x8 dut2 (clk, rst, we, cs, oe, addr, data) ;
+  ram8x8 dut3 (clk, rst, we, cs, oe, addr, data) ;
+  ram8x8 dut4(clk, rst, we, cs, oe, addr, data);
+  always@(*)
+    begin
+      if (addr == 2'b00) begin
+        cs1 = 1'b1;
+        cs2 = 1'b0;
+        cs3 = 1'b0;
+        cs4 = 1'b0;
+      end
+      else if (addr == 2'b01) begin
+        cs1 = 1'b0;
+        cs2 = 1'b1;
+        cs3 = 1'b0;
+        cs4 = 1'b0;
+      end
+      else if (addr == 2'b10) begin
+        cs1 = 1'b0;
+        cs2 = 1'b0;
+        cs3 = 1'b1;
+        cs4 = 1'b0;
+      end
+      else if (addr == 2'b11) begin
+        cs1 = 1'b0;
+        cs2 = 1'b0;
+        cs3 = 1'b0;
+        cs4 = 1'b1;
+      end
+  initial
+    begin
+      (clk, rst, we, cs, oe, addr, data_temp) = 0;
+    end
+  always #5 clk = ~clk;
+  initial
+    begin
+      @ (negedge clk)
+      rst =1;
+      @ (negedge clk)
+      rst =0;
+      @ (negedge clk)
+      we = 1'b1;
+      cs = 1'b1;
+      data_temp = 8'b1101_0111;
+      addr = 2'b01;
+      @ (negedge clk)
+      we = 1'b0;
+      cs = 1'b1;
+      addr = 0;
+      oe = 1;
+      #20;
+      $finish;
+    end
+endmodule
