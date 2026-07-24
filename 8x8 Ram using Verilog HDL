@@ -1,68 +1,93 @@
 //Design Code
-module RAM8 8 (
-input clk, rst, wr_enb,
-input [3:0] wr_addr, input [7:0] data_in,
-input rd_enb, output reg [7:0] data_out
+module RAM8x8 (
+    input clk,
+    input rst,
+    input wr_enb,
+    input [2:0] wr_addr,
+    input [7:0] data_in,
+    input rd_enb,
+    input [2:0] rd_addr,
+    output reg [7:0] data_out
 );
 
-reg [7:0] mem[7:0];
-
+reg [7:0] mem [0:7];
 integer i;
-always@ (posedge clk or rst)
+always @(posedge clk or posedge rst)
 begin
-if(rst) begin
-for(i =0;i<7;i=i+1)
-mem[i] <= 0;
-end
+    if (rst) begin
+        for (i = 0; i < 8; i = i + 1)
+            mem[i] <= 8'd0;
+        data_out <= 8'd0;
+    end
+    else begin
+        if (wr_enb)
+            mem[wr_addr] <= data_in;
 
-else
-if(wr_enb)
-mem [wr]addr] <= data_in;
-
-else if(wr_eb == 0)
-data_out <= mem[rd_addr];
-
+        if (rd_enb)
+            data_out <= mem[rd_addr];
+    end
 end
 endmodule
 
+
+
+
 //Test bench code
-module ram_8_8_tb(
+module ram8x8_tb;
 
-);
-
-reg clk, rst, wr_enb;
-reg [3:0] wr_addr;
+reg clk;
+reg rst;
+reg wr_enb;
+reg rd_enb;
+reg [2:0] wr_addr;
+reg [2:0] rd_addr;
 reg [7:0] data_in;
-reg [3:0] rd_addr;
+
 wire [7:0] data_out;
 
-RAM8_8 dut (clk, rst, wr_enb, wr_addr, data_in, rd_enb, rd_addr, data_out) ;
-
-initial
-begin
-{clk, rst,wr_enb,wr_addr,data_in,rd_enb, rd_addr} = 0;
-
-end
+RAM8x8 dut (
+    .clk(clk),
+    .rst(rst),
+    .wr_enb(wr_enb),
+    .wr_addr(wr_addr),
+    .data_in(data_in),
+    .rd_enb(rd_enb),
+    .rd_addr(rd_addr),
+    .data_out(data_out)
+);
 
 always #5 clk = ~clk;
 
-initial
-begin
-rst = 1;
-#10;
-rst = 0;
-wr_enb = 1;
-wr_addr = 3'b100;
-data_in = 5;
-#10;
-wr_enb = 1;
-wr_addr = 3'b101;
-data in = 10;
-#10;
-wr_enb = 0;
-rd_addrl= 3'b100;
-#10;
-rd_addr = 3'b101;
-  $finish
+initial begin
+    clk = 0;
+    rst = 1;
+    wr_enb = 0;
+    rd_enb = 0;
+    wr_addr = 3'd0;
+    rd_addr = 3'd0;
+    data_in = 8'd0;
+
+    #10;
+    rst = 0;
+
+    wr_enb = 1;
+    wr_addr = 3'd4;
+    data_in = 8'd5;
+    #10;
+
+    wr_addr = 3'd5;
+    data_in = 8'd10;
+    #10;
+    wr_enb = 0;
+    rd_enb = 1;
+    rd_addr = 3'd4;
+    #10;
+    rd_addr = 3'd5;
+    #10;
+    $finish;
+end
+initial begin
+    $monitor("Time=%0t | WR=%b | RD=%b | WR_ADDR=%d | RD_ADDR=%d | DATA_IN=%d | DATA_OUT=%d",
+              $time, wr_enb, rd_enb, wr_addr, rd_addr, data_in, data_out);
 end
 endmodule
