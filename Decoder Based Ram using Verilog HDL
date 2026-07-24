@@ -1,79 +1,106 @@
 // Design Code
-module ram8x8(input clk,rst,we,cs,oe, input[2:0]add, inout[7:0]data);
-  reg[7:0] mem[0:7];
-  reg[7:0] temp_data;
-  always@(posedge clk)
-    begin
-      if(rst)
-        for(i=0; i<7; i=i+1)
-          mem[i] <= 0;
-      else if(we&&cs)
+module ram8x8(
+    input clk,
+    input rst,
+    input we,
+    input cs,
+    input oe,
+    input [2:0] addr,
+    inout [7:0] data
+);
+reg [7:0] mem [0:7];
+reg [7:0] temp_data;
+integer i;
+always @(posedge clk) begin
+    if (rst) begin
+        for (i = 0; i < 8; i = i + 1)
+            mem[i] <= 8'd0;
+    end
+    else if (we && cs) begin
         mem[addr] <= data;
-      else if(cs && !we)
+    end
+    else if (cs && !we) begin
         temp_data <= mem[addr];
     end
-  assign data = (!we && cs && oe)? temp_data : 'bz;
+end
+assign data = (!we && cs && oe) ? temp_data : 8'bz;
 endmodule
 
 
+
+
 // TestBench Code
-module ram8x8_tb();
-  reg clk, rst, we, cs, oe;
-  reg [2:0]addr;
-  reg [7:0]data_temp;
-  wire [7:0]data;
-  ram8x8 dut1 (clk, rst, we, cs, oe, addr, data) ;
-  ram8x8 dut2 (clk, rst, we, cs, oe, addr, data) ;
-  ram8x8 dut3 (clk, rst, we, cs, oe, addr, data) ;
-  ram8x8 dut4(clk, rst, we, cs, oe, addr, data);
-  always@(*)
-    begin
-      if (addr == 2'b00) begin
-        cs1 = 1'b1;
-        cs2 = 1'b0;
-        cs3 = 1'b0;
-        cs4 = 1'b0;
-      end
-      else if (addr == 2'b01) begin
-        cs1 = 1'b0;
-        cs2 = 1'b1;
-        cs3 = 1'b0;
-        cs4 = 1'b0;
-      end
-      else if (addr == 2'b10) begin
-        cs1 = 1'b0;
-        cs2 = 1'b0;
-        cs3 = 1'b1;
-        cs4 = 1'b0;
-      end
-      else if (addr == 2'b11) begin
-        cs1 = 1'b0;
-        cs2 = 1'b0;
-        cs3 = 1'b0;
-        cs4 = 1'b1;
-      end
-  initial
-    begin
-      (clk, rst, we, cs, oe, addr, data_temp) = 0;
-    end
-  always #5 clk = ~clk;
-  initial
-    begin
-      @ (negedge clk)
-      rst =1;
-      @ (negedge clk)
-      rst =0;
-      @ (negedge clk)
-      we = 1'b1;
-      cs = 1'b1;
-      data_temp = 8'b1101_0111;
-      addr = 2'b01;
-      @ (negedge clk)
-      we = 1'b0;
-      cs = 1'b1;
-      addr = 0;
-      oe = 1;
-      #20;
-      $finish;
-    end
+module ram8x8_tb;
+reg clk;
+reg rst;
+reg we;
+reg oe;
+reg [3:0] cs;
+reg [2:0] addr;
+
+reg [7:0] data_temp;
+wire [7:0] data;
+
+assign data = (we) ? data_temp : 8'bz;
+
+ram8x8 dut1 (
+    .clk(clk), .rst(rst), .we(we), .cs(cs[0]), .oe(oe), .addr(addr), .data(data)
+);
+
+ram8x8 dut2 (
+    .clk(clk), .rst(rst), .we(we), .cs(cs[1]), .oe(oe), .addr(addr), .data(data)
+);
+
+ram8x8 dut3 (
+    .clk(clk), .rst(rst), .we(we), .cs(cs[2]), .oe(oe), .addr(addr), .data(data)
+);
+
+ram8x8 dut4 (
+    .clk(clk), .rst(rst), .we(we), .cs(cs[3]), .oe(oe), .addr(addr), .data(data)
+);
+
+always @(*) begin
+    cs = 4'b0000;
+
+    case(addr[1:0])
+        2'b00: cs = 4'b0001;
+        2'b01: cs = 4'b0010;
+        2'b10: cs = 4'b0100;
+        2'b11: cs = 4'b1000;
+    endcase
+end
+
+always #5 clk = ~clk;
+
+initial begin
+    clk = 0;
+    rst = 0;
+    we = 0;
+    oe = 0;
+    addr = 0;
+    data_temp = 0;
+
+    @(negedge clk);
+    rst = 1;
+    @(negedge clk);
+    rst = 0;
+
+    @(negedge clk);
+    we = 1;
+    oe = 0;
+    addr = 3'b001;
+    data_temp = 8'b11010111;
+
+    @(negedge clk);
+    we = 0;
+    oe = 1;
+    addr = 3'b001;
+
+    #20;
+    $finish;
+end
+initial begin
+    $monitor("Time=%0t rst=%b we=%b oe=%b addr=%d data=%h",
+              $time, rst, we, oe, addr, data);
+end
 endmodule
