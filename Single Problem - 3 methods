@@ -1,0 +1,48 @@
+//2x1 MUX
+//Verilog Behavioral (algorithmic) style:
+
+module mux2x1_behavioral (
+    input  wire I0,
+    input  wire I1,
+    input  wire S,
+    output reg  Y
+);
+    always @(*) begin
+        if (S == 1'b0)
+            Y = I0;
+        else
+            Y = I1;
+    end
+endmodule
+
+
+
+
+//Verilog Dataflow style:
+module mux2x1_dataflow (
+    input  wire I0,
+    input  wire I1,
+    input  wire S,
+    output wire Y
+);
+    assign Y = (~S & I0) | (S & I1);
+endmodule
+
+
+
+
+//Verilog Gate-level (structural) style:
+module mux2x1_gate (
+    input  wire I0,
+    input  wire I1,
+    input  wire S,
+    output wire Y
+);
+    wire nS;
+    wire w0, w1;
+
+    not  u0(nS, S);      // nS = ~S
+    and  u1(w0, nS, I0); // w0 = ~S & I0
+    and  u2(w1, S,  I1); // w1 = S & I1
+    or   u3(Y,  w0, w1); // Y  = w0 | w1
+endmodule
